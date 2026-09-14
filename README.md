@@ -1,4 +1,4 @@
-# 🪵 쿼리도
+# 🚧 쿼리도
 
 ![종류](https://img.shields.io/badge/%EC%A2%85%EB%A5%98-%EB%B3%B4%EB%93%9C%EA%B2%8C%EC%9E%84-7a4a2a?style=flat-square) ![인원](https://img.shields.io/badge/%EC%9D%B8%EC%9B%90-1~4%EC%9D%B8-555?style=flat-square) [![플레이](https://img.shields.io/badge/%ED%94%8C%EB%A0%88%EC%9D%B4-quoridor.41ways.workers.dev-c9572e?style=flat-square)](https://quoridor.41ways.workers.dev/) [![허브](https://img.shields.io/badge/%ED%97%88%EB%B8%8C-norara-b4571f?style=flat-square)](https://41ways.github.io/norara/)
 

@@ -27,6 +27,15 @@
 
 <!-- ───────────────── 타이틀 ───────────────── -->
 <section id="title" class="screen on">
+  <div class="deco" aria-hidden="true">
+    <span class="d-pawn s0" style="--x:6%;--y:74%;--s:1;--d:0s"></span>
+    <span class="d-pawn s2" style="--x:60%;--y:7%;--s:.7;--d:-3s"></span>
+    <span class="d-pawn s1" style="--x:92%;--y:80%;--s:.85;--d:-6s"></span>
+    <span class="d-pawn s3" style="--x:88%;--y:14%;--s:.55;--d:-9s"></span>
+    <span class="d-wall" style="--x:12%;--y:12%;--r:-24deg;--s:1;--d:-2s"></span>
+    <span class="d-wall" style="--x:76%;--y:91%;--r:18deg;--s:.8;--d:-5s"></span>
+    <span class="d-wall" style="--x:96%;--y:46%;--r:84deg;--s:.7;--d:-8s"></span>
+  </div>
   <header class="topbar">
     <a class="brand-mini" href="https://41ways.github.io/norara/" title="게임 모음으로">norara</a>
     <div class="tools">
@@ -39,17 +48,29 @@
     <div class="hero-board">
       <svg id="demo" class="board-svg" aria-hidden="true"></svg>
       <div class="hero-shine" aria-hidden="true"></div>
+      <div class="live" aria-hidden="true"><i></i>봇끼리 대결 중 · <b id="demoPly">0</b>수</div>
     </div>
 
     <div class="hero-copy">
-      <p class="eyebrow">벽과 길의 보드게임</p>
+      <p class="eyebrow"><span class="eb-dot s0"></span><span class="eb-dot s2"></span>벽과 길의 보드게임</p>
       <h1 class="logo">쿼리도</h1>
       <p class="tagline">벽을 세워 길을 굽히고, <br>먼저 건너편에 닿으세요.</p>
 
       <!-- 처음 — 시작 단추 하나 -->
       <div class="intro" id="intro">
-        <button id="bBegin" class="btn primary big begin">게임 시작</button>
-        <button class="link-btn" data-rules>규칙 한눈에 보기 →</button>
+        <div class="cta">
+          <button id="bBegin" class="btn primary begin">
+            <span class="begin-pawn" aria-hidden="true"></span>
+            <span class="begin-txt">게임 시작</span>
+            <svg class="begin-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button class="btn rules-btn" data-rules><svg viewBox="0 0 24 24"><use href="#i-book"/></svg>규칙</button>
+        </div>
+        <ul class="facts">
+          <li><span class="f-ico f-wall"><i></i><i></i><i></i></span><span><b>벽 10개</b><small>2인 기준</small></span></li>
+          <li><span class="f-ico f-pawns"><i class="s0"></i><i class="s2"></i></span><span><b>1:1 · 4인</b><small>친구 초대</small></span></li>
+          <li><span class="f-ico f-bot">🤖</span><span><b>봇 3단계</b><small>혼자서도</small></span></li>
+        </ul>
       </div>
 
       <!-- 게임 시작을 누른 뒤 — 혼자 / 친구와 -->

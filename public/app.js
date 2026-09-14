@@ -872,6 +872,7 @@
       draw();
     }
     function draw(fresh) {
+      const ply = $('#demoPly'); if (ply) ply.textContent = g.ply;
       const walls = g.walls.map(w => ({ x: w.x, y: w.y, o: w.o, seat: g.pawns[w.by].seat }));
       b.render({
         pawns: g.pawns.map((p, i) => ({ key: i, seat: p.seat, x: p.x, y: p.y, active: g.winner < 0 && g.turn === i })),

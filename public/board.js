@@ -206,6 +206,9 @@
       this.goalKey = key;
       this.goalG.textContent = '';
       for (const t of this.tiles) t.tint.removeAttribute('style');
+      for (const e of this.splitEls || []) e.remove();
+      this.splitEls = [];
+      const owners = new Map();   // 칸 → [{ seat, side }] — 4인전 모서리는 두 사람의 결승선이 겹친다
       for (const { seat, side } of goals) {
         const long = SIZE - 2 * PAD - 60;
         const th = 9;
@@ -218,8 +221,34 @@
         for (let k = 0; k < 9; k++) {
           const cx = side === 'left' ? 0 : side === 'right' ? 8 : k;
           const cy = side === 'top' ? 0 : side === 'bottom' ? 8 : k;
-          const t = this.tiles[cy * 9 + cx];
-          t.tint.setAttribute('style', `fill:var(--s${seat});opacity:var(--goal-tint)`);
+          const i = cy * 9 + cx;
+          if (!owners.has(i)) owners.set(i, []);
+          owners.get(i).push({ seat, side });
+        }
+      }
+      for (const [i, list] of owners) {
+        const t = this.tiles[i];
+        if (list.length === 1) {
+          t.tint.setAttribute('style', `fill:var(--s${list[0].seat});opacity:var(--goal-tint)`);
+          continue;
+        }
+        // 겹친 모서리 — 바깥 꼭짓점을 지나는 대각선으로 반씩. 각 반쪽은 그 사람의 결승선 변에 닿는다
+        const x0 = cellX(i % 9), y0 = cellX((i / 9) | 0), x1 = x0 + C, y1 = y0 + C;
+        const clipId = `${this.id}clip${i}`;
+        if (!this.svg.getElementById(clipId)) {
+          const cp = el('clipPath', { id: clipId }, this.svg.querySelector('defs'));
+          el('rect', { x: x0, y: y0, width: C, height: C, rx: 13 }, cp);
+        }
+        const tri = {
+          top:    `M${x0},${y0} L${x1},${y0} L${list.some(o => o.side === 'left') ? `${x1},${y1}` : `${x0},${y1}`} Z`,
+          bottom: `M${x0},${y1} L${x1},${y1} L${list.some(o => o.side === 'left') ? `${x1},${y0}` : `${x0},${y0}`} Z`,
+          left:   `M${x0},${y0} L${x0},${y1} L${list.some(o => o.side === 'top') ? `${x1},${y1}` : `${x1},${y0}`} Z`,
+          right:  `M${x1},${y0} L${x1},${y1} L${list.some(o => o.side === 'top') ? `${x0},${y1}` : `${x0},${y0}`} Z`,
+        };
+        for (const { seat, side } of list) {
+          const path = el('path', { d: tri[side], 'clip-path': `url(#${clipId})`, class: 'tile-tint', style: `fill:var(--s${seat});opacity:var(--goal-tint)` });
+          t.g.insertBefore(path, t.tint);
+          this.splitEls.push(path);
         }
       }
     }

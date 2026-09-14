@@ -253,7 +253,7 @@
         d.className = 'seat';
         d.style.animationDelay = k * 40 + 'ms';
         const tags = [p.id === s.hostId ? '방장' : '', p.id === s.meId ? '나' : '', p.bot ? `봇 · ${LEVEL[p.level] || ''}` : '', !p.connected && !p.bot ? '연결 끊김' : '', p.wins ? `${p.wins}승` : ''].filter(Boolean).join(' · ');
-        d.innerHTML = `<span class="mini-pawn s${[0, 2, 1, 3][k]}">${p.bot ? '<span class="bot-tag">🤖</span>' : ''}</span>
+        d.innerHTML = `<span class="mini-pawn s${[0, 2, 1, 3][k]}">${p.bot ? '<span class="bot-tag"><svg viewBox="0 0 24 24"><use href="#i-bot"/></svg></span>' : ''}</span>
           <div class="who"><div class="nm">${esc(p.name)}</div><div class="sub">${tags || '&nbsp;'}</div></div>
           ${host && p.id !== s.meId ? `<button class="kick" data-kick="${p.id}" aria-label="내보내기"><svg viewBox="0 0 24 24"><use href="#i-x"/></svg></button>` : ''}`;
       }
@@ -386,7 +386,7 @@
     if (p.pawn && p.pawn.out) cls.push('out');
     if (!p.bot && !p.connected) cls.push('away');
     return `<div class="${cls.join(' ')}" data-pid="${p.id}">
-      <span class="mini-pawn s${seat}">${p.bot ? '<span class="bot-tag">🤖</span>' : ''}</span>
+      <span class="mini-pawn s${seat}">${p.bot ? '<span class="bot-tag"><svg viewBox="0 0 24 24"><use href="#i-bot"/></svg></span>' : ''}</span>
       <div class="info">
         <div class="nm">${esc(p.name)}${p.wins ? ` <small style="color:var(--faint);font-weight:600">${p.wins}승</small>` : ''}</div>
         <div class="meta">${d != null ? `<span class="dist">${d}<small>칸</small></span>` : (p.pawn && p.pawn.out ? '<span>빠짐</span>' : '')}${sticks}${big ? `<span>벽 ${left}개</span>` : ''}</div>
@@ -674,7 +674,7 @@
   $('#turnPill').addEventListener('click', () => { if (S && S.phase === 'over') showOver(S); });
 
   /* ───────────────── 채팅 ───────────────── */
-  // 허브의 다른 게임과 같은 짜임 — 사람이 나 말고 또 있을 때만 오른쪽 아래 💬 단추가 뜬다.
+  // 허브의 다른 게임과 같은 짜임 — 사람이 나 말고 또 있을 때만 오른쪽 아래 채팅 단추가 뜬다.
   // 접어 둔 동안 온 말은 단추의 빨간 숫자 · 단추 옆 말풍선 · (다른 탭이면) 탭 제목 앞 (n) 으로 알린다.
 
   let chatUnread = 0, chatAway = 0, chatPeekT = 0, chatRoom = null;
@@ -706,11 +706,9 @@
   }
   function onChat(m) {
     const mine = S && m.from === S.meId;
-    const p = S && S.players.find(x => x.id === m.from);
-    const seat = p && p.pawn ? p.pawn.seat : null;
     const d = document.createElement('p');
     d.className = 'chat-msg' + (mine ? ' mine' : '');
-    d.innerHTML = `<b style="color:${seat != null ? `var(--s${seat})` : 'var(--ink-2)'}">${esc(m.name)}</b>${esc(m.text)}`;
+    d.innerHTML = `<b>${esc(m.name)}</b> ${esc(m.text)}`;
     pushLog(d);
     // 판 위 사람 칩에도 잠깐 말풍선
     const chip = document.querySelector(`.pchip[data-pid="${m.from}"]`);

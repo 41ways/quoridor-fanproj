@@ -196,18 +196,9 @@
         <div class="stock" id="stock" aria-label="남은 벽"></div>
       </div>
       <p class="hint" id="hint">말을 옮기거나 칸 사이 홈을 눌러 벽을 세우세요</p>
-      <div class="emotes" id="emotes">
-        <button data-e="👍">👍</button><button data-e="😮">😮</button><button data-e="😂">😂</button><button data-e="🤔">🤔</button><button data-e="😭">😭</button><button data-e="🔥">🔥</button>
-        <button class="chat-open" id="bChat" aria-label="채팅"><svg viewBox="0 0 24 24"><use href="#i-chat"/></svg><span class="badge" id="chatBadge"></span></button>
-      </div>
     </div>
   </div>
 
-  <aside class="chat" id="chat">
-    <div class="chat-head"><b>채팅</b><button class="icon-btn sm" id="bChatClose" aria-label="닫기"><svg viewBox="0 0 24 24"><use href="#i-x"/></svg></button></div>
-    <ol class="chat-log" id="chatLog"></ol>
-    <form class="chat-form" id="chatForm"><input id="chatInput" maxlength="200" placeholder="한마디" autocomplete="off"><button class="btn small">보내기</button></form>
-  </aside>
 </section>
 
 <!-- ───────────────── 끝 ───────────────── -->
@@ -261,6 +252,18 @@
     </p>
   </div>
 </div>
+
+<!-- ───────────────── 채팅 (다른 게임과 같은 모양: 오른쪽 아래 단추 · 새 말 말풍선 · 채팅창) ───────────────── -->
+<button id="chatBtn" class="chat-btn" hidden aria-label="채팅 열기">💬<span class="chat-n" id="chatN" hidden></span></button>
+<div id="chatPeek" class="chat-peek" hidden role="status" aria-live="polite"></div>
+<section id="chat" class="chat" hidden aria-label="채팅">
+  <header class="chat-head"><b>채팅</b><span class="chat-sub" id="chatWho"></span><button class="chat-x" id="chatX" aria-label="닫기">✕</button></header>
+  <div class="chat-log" id="chatLog"></div>
+  <form class="chat-in" id="chatForm">
+    <input id="chatText" maxlength="200" placeholder="같은 방 사람들에게" autocomplete="off">
+    <button class="btn small">보내기</button>
+  </form>
+</section>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 

@@ -105,7 +105,8 @@
   function show(id) {
     for (const s of $$('.screen')) s.classList.toggle('on', s.id === id);
     demo.running(id === 'title');
-    if (id !== 'game') { closeOverlay('#over'); $('#chat').classList.remove('on'); }
+    if (id !== 'game') closeOverlay('#over');
+    if (id === 'title') syncChat(null);
   }
   const current = () => ($('.screen.on') || {}).id;
 
@@ -183,7 +184,6 @@
       case 'left': forget(); show('title'); break;
       case 'ev': onEvent(m); break;
       case 'chat': onChat(m); break;
-      case 'emote': onEmote(m); break;
     }
   }
 
@@ -214,6 +214,7 @@
   function render(s) {
     const prev = S;
     S = s;
+    syncChat(s);
     skew = s.now - Date.now();
     const me = s.players.find(p => p.id === s.meId);
     rot = me && me.pawn ? me.pawn.seat : 0;
@@ -599,7 +600,7 @@
     if (e.key === 'Escape') {
       cancelPending();
       for (const o of ['#rules', '#menu']) closeOverlay(o);
-      $('#chat').classList.remove('on');
+      if (!$('#chat').hidden) chatOpen(false);
     }
   });
 
@@ -672,30 +673,46 @@
   $('#bView').addEventListener('click', () => closeOverlay('#over'));
   $('#turnPill').addEventListener('click', () => { if (S && S.phase === 'over') showOver(S); });
 
-  /* ───────────────── 채팅 · 이모지 ───────────────── */
+  /* ───────────────── 채팅 ───────────────── */
+  // 허브의 다른 게임과 같은 짜임 — 사람이 나 말고 또 있을 때만 오른쪽 아래 💬 단추가 뜬다.
+  // 접어 둔 동안 온 말은 단추의 빨간 숫자 · 단추 옆 말풍선 · (다른 탭이면) 탭 제목 앞 (n) 으로 알린다.
 
-  let unread = 0;
-  function sysChat(text) {
-    const li = document.createElement('li');
-    li.className = 'sys'; li.textContent = text;
-    pushLog(li);
+  let chatUnread = 0, chatAway = 0, chatPeekT = 0, chatRoom = null;
+  const chatTitle0 = document.title;
+
+  function chatReset() {
+    $('#chatLog').textContent = '';
+    $('#chat').hidden = true;
+    chatUnread = 0; chatBadge(); chatPeekOff();
+    chatAway = 0; chatTitle();
   }
-  function pushLog(li) {
+  function chatOpen(on) {
+    $('#chat').hidden = !on;
+    if (!on) return;
+    chatUnread = 0; chatBadge(); chatPeekOff();
+    $('#chatText').focus();
+    const log = $('#chatLog'); log.scrollTop = log.scrollHeight;
+  }
+  function pushLog(d) {
     const log = $('#chatLog');
-    log.appendChild(li);
-    while (log.children.length > 80) log.firstChild.remove();
+    log.appendChild(d);
+    while (log.children.length > 60) log.removeChild(log.firstChild);
     log.scrollTop = log.scrollHeight;
   }
+  function sysChat(text) {
+    const d = document.createElement('p');
+    d.className = 'chat-msg sys'; d.textContent = text;
+    pushLog(d);
+  }
   function onChat(m) {
-    const li = document.createElement('li');
+    const mine = S && m.from === S.meId;
     const p = S && S.players.find(x => x.id === m.from);
     const seat = p && p.pawn ? p.pawn.seat : null;
-    li.innerHTML = `<b style="color:${seat != null ? `var(--s${seat})` : 'var(--ink)'}">${esc(m.name)}</b>${esc(m.text)}`;
-    pushLog(li);
-    if (!$('#chat').classList.contains('on') && m.from !== (S && S.meId)) {
-      unread++;
-      const b = $('#chatBadge'); b.textContent = unread > 9 ? '9+' : unread; b.classList.add('on');
-    }
+    const d = document.createElement('p');
+    d.className = 'chat-msg' + (mine ? ' mine' : '');
+    d.innerHTML = `<b style="color:${seat != null ? `var(--s${seat})` : 'var(--ink-2)'}">${esc(m.name)}</b>${esc(m.text)}`;
+    pushLog(d);
+    // 판 위 사람 칩에도 잠깐 말풍선
     const chip = document.querySelector(`.pchip[data-pid="${m.from}"]`);
     if (chip) {
       const say = document.createElement('span');
@@ -704,35 +721,60 @@
       chip.appendChild(say);
       setTimeout(() => say.remove(), 3700);
     }
-  }
-  function onEmote(m) {
-    const chip = document.querySelector(`.pchip[data-pid="${m.from}"]`);
-    if (chip) {
-      const b = document.createElement('span');
-      b.className = 'bubble'; b.textContent = m.e;
-      chip.appendChild(b);
-      setTimeout(() => b.remove(), 1850);
-    }
-    const p = S && S.players.find(x => x.id === m.from);
-    if (p && p.pawn && !p.pawn.out) { const v = vCell(p.pawn); boardView.b.floatAt(v.x, v.y, m.e); }
+    if (mine) return;
     Sound.fx('pop');
+    if ($('#chat').hidden) { chatUnread++; chatBadge(); chatPeek(m.name, m.text); }
+    if (document.hidden || !document.hasFocus()) { chatAway++; chatTitle(); }
   }
-  $('#emotes').addEventListener('click', e => {
-    const b = e.target.closest('[data-e]');
-    if (b) send({ t: 'emote', e: b.dataset.e });
-  });
-  $('#bChat').addEventListener('click', () => {
-    $('#chat').classList.toggle('on');
-    unread = 0; $('#chatBadge').classList.remove('on');
-    if ($('#chat').classList.contains('on')) setTimeout(() => $('#chatInput').focus(), 50);
-  });
-  $('#bChatClose').addEventListener('click', () => $('#chat').classList.remove('on'));
+  function chatBadge() {
+    const n = $('#chatN');
+    n.textContent = chatUnread > 99 ? '99+' : chatUnread;
+    n.hidden = !chatUnread;
+    $('#chatBtn').setAttribute('aria-label', chatUnread ? `채팅 열기 — 안 읽은 말 ${chatUnread}개` : '채팅 열기');
+    if (!chatUnread) return;
+    n.classList.remove('pop'); void n.offsetWidth; n.classList.add('pop');
+  }
+  function chatPeek(name, text) {
+    const p = $('#chatPeek');
+    p.innerHTML = `<b>${esc(name)}</b>${esc(text)}`;
+    p.classList.remove('bye'); p.hidden = false;
+    p.style.animation = 'none'; void p.offsetWidth; p.style.animation = '';
+    clearTimeout(chatPeekT);
+    chatPeekT = setTimeout(() => {
+      p.classList.add('bye');
+      chatPeekT = setTimeout(chatPeekOff, 260);
+    }, Math.min(6000, Math.max(3000, 1200 + 70 * text.length)));
+  }
+  function chatPeekOff() {
+    clearTimeout(chatPeekT);
+    const p = $('#chatPeek'); p.hidden = true; p.classList.remove('bye');
+  }
+  function chatTitle() { document.title = (chatAway ? `(${chatAway > 99 ? '99+' : chatAway}) ` : '') + chatTitle0; }
+  function chatBack() { if (chatAway && !document.hidden && document.hasFocus()) { chatAway = 0; chatTitle(); } }
+  document.addEventListener('visibilitychange', chatBack);
+  window.addEventListener('focus', chatBack);
+
+  /** 방이 바뀌면 비우고, 사람이 둘 이상일 때만 단추를 내놓는다 */
+  function syncChat(s) {
+    if (!s) { chatRoom = null; chatReset(); $('#chatBtn').hidden = true; return; }
+    if (s.code !== chatRoom) { chatRoom = s.code; chatReset(); }
+    const humans = s.players.filter(p => !p.bot).length;
+    const on = humans > 1;
+    $('#chatBtn').hidden = !on;
+    if (!on) { $('#chat').hidden = true; chatPeekOff(); }
+    else $('#chatWho').textContent = `${humans}명`;
+  }
+
+  $('#chatBtn').addEventListener('click', () => chatOpen($('#chat').hidden));
+  $('#chatPeek').addEventListener('click', () => chatOpen(true));
+  $('#chatX').addEventListener('click', () => chatOpen(false));
   $('#chatForm').addEventListener('submit', e => {
     e.preventDefault();
-    const v = $('#chatInput').value.trim();
-    if (!v) return;
-    send({ t: 'chat', text: v });
-    $('#chatInput').value = '';
+    const box = $('#chatText');
+    const text = box.value.trim();
+    if (!text) return;
+    send({ t: 'chat', text });
+    box.value = '';
   });
 
   /* ───────────────── 타이틀 · 대기실 버튼 ───────────────── */

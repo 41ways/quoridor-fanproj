@@ -415,7 +415,7 @@ function handle(ws, msg) {
       retirePlayer(room, me, 'resign');
       break;
 
-    // 같은 방 사람끼리 하는 잡담과 이모지. 판정에는 아무 영향이 없고 저장하지 않는다.
+    // 같은 방 사람끼리 하는 잡담. 판정에는 아무 영향이 없고 저장하지 않는다.
     case 'chat': {
       const text = clean(msg.text, 200);
       if (!text) return;
@@ -425,16 +425,6 @@ function handle(ws, msg) {
       broadcast(room, { t: 'chat', from: me.id, name: me.name, text });
       break;
     }
-    case 'emote': {
-      const e = ['👍', '😮', '😂', '🤔', '😭', '🔥'].includes(msg.e) ? msg.e : null;
-      if (!e) return;
-      const now = Date.now();
-      if (now - (me.lastEmote || 0) < 700) return;
-      me.lastEmote = now;
-      broadcast(room, { t: 'emote', from: me.id, e });
-      break;
-    }
-
     case 'again': {
       if (!isHost || room.phase !== 'over') return;
       // 판 중에 떠난 사람은 대기실 떠나기 예약을 걸어 둔다 — 유령 자리로 남지 않게

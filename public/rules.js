@@ -397,12 +397,19 @@
     return { x, y, o };
   }
 
+  // 첫 화면에서 되풀이해 보여 주는 봇끼리 세 판 (m 이동 · h/v 벽, 뒤 두 자리는 x y)
+  const DEMO_GAMES = [
+    'm58 m41 m57 m42 h37 m43 m56 m44 m55 m45 m54 m46 h57 m47 m53 h52 v27 v42 h77 m37 h36 m47 v35 m57 h56 m67 v33 m77 v31 m76 h17 m75 m63 v63 m64 m74 m54 h41 m55 v55 m54 m73 m64 m72 m65 m71 m75 m70 m74 m60 m73 m50 m72 m40 m71 h60 m81 m41 m80',
+    'm47 m41 m46 m42 h47 m43 m45 h31 h36 m53 m55 h51 h67 h71 h53 v44 m56 v46 m66 v52 h17 h11 m67 v76 m77 v74 m76 h65 v26 m43 m66 m33 m56 m23 m55 m24 m54 m14 m64 m04 m74 m05 m73 m06 m83 m07 m84 m08',
+    'm47 m41 m46 m42 m45 h41 m44 m43 m42 h20 m32 h40 m31 v11 m21 v31 m22 h01 h33 h61 m23 v23 v43 v52 h55 v45 m22 m33 h12 m43 v64 m42 m32 m52 m33 m53 m43 m54 m42 m64 m52 m63 m53 m73 m54 m74 m64 m75 m63 m76 m73 m77 h67 m87 m83 m88',
+  ];
+
   const R = {
     N, G, SEATS, seatsFor, wallsFor,
     newGame, clone, canStep, pawnAt, pawnMoves, atGoal,
     distance, shortestPath, wallFits, wallProblem, WALL_WHY,
     apply, retire, botMove, fallbackMove,
-    rotCell, rotWall,
+    rotCell, rotWall, DEMO_GAMES,
   };
 
   if (typeof module === 'object' && module.exports) module.exports = R;

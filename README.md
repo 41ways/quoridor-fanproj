@@ -73,7 +73,7 @@ node test/smoke.js https://quoridor.41ways.workers.dev
 ## 테스트
 
 ```bash
-npm test                                   # 규칙 14개 + 방 흐름 5개
+npm test                                   # 규칙 15개 + 방 흐름 5개
 node test/smoke.js http://127.0.0.1:8795   # 떠 있는 서버에 붙어서 한 판
 ```
 

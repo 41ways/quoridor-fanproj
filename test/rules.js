@@ -152,4 +152,16 @@ t('어려움 봇이 쉬움 봇을 이긴다 (10판 중 7판 이상)', () => {
   assert.ok(win >= 7, `어려움 ${win}/10`);
 });
 
+t('첫 화면 구경용 세 판이 규칙대로 끝난다', () => {
+  for (const [k, line] of Q.DEMO_GAMES.entries()) {
+    const g = Q.newGame(2);
+    for (const m of line.split(' ')) {
+      const a = m[0] === 'm' ? { k: 'move', x: +m[1], y: +m[2] } : { k: 'wall', o: m[0], x: +m[1], y: +m[2] };
+      const r = Q.apply(g, g.turn, a);
+      assert.ok(!r.error, `${k + 1}번째 판 ${m}: ${r.error}`);
+    }
+    assert.ok(g.winner >= 0, `${k + 1}번째 판이 끝나지 않음`);
+  }
+});
+
 console.log(`\n${pass}개 통과`);

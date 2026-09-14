@@ -864,9 +864,16 @@
 
   /* ───────────────── 타이틀의 구경용 판 ───────────────── */
 
+  // 봇끼리 미리 둬 둔 세 판을 차례로 되풀이한다 — 매번 새로 두면 판이 들쭉날쭉해서
+  // m<x><y> 이동, h/v<x><y> 벽.  test/rules.js 가 세 판 모두 규칙대로 끝나는지 확인한다.
+  const DEMO_GAMES = Q.DEMO_GAMES;
+
   const demo = (() => {
-    let b = null, g = null, timer = null, on = false;
+    let b = null, g = null, timer = null, on = false, game = -1, moves = [], at = 0;
     function reset() {
+      game = (game + 1) % DEMO_GAMES.length;
+      moves = DEMO_GAMES[game].split(' ');
+      at = 0;
       g = Q.newGame(2);
       if (b) b.reset(); else b = new Board($('#demo'));
       draw();
@@ -882,10 +889,11 @@
     }
     function step() {
       if (!on) return;
-      if (g.winner >= 0) { timer = setTimeout(() => { reset(); timer = setTimeout(step, 1200); }, 2600); return; }
-      const a = Q.botMove(g, g.turn, g.ply < 6 ? 'easy' : 'normal');
-      if (a) Q.apply(g, g.turn, a);
-      draw(a && a.k === 'wall' ? `${a.x},${a.y},${a.o}` : null);
+      if (g.winner >= 0 || at >= moves.length) { timer = setTimeout(() => { reset(); timer = setTimeout(step, 1200); }, 2600); return; }
+      const m = moves[at++];
+      const a = m[0] === 'm' ? { k: 'move', x: +m[1], y: +m[2] } : { k: 'wall', o: m[0], x: +m[1], y: +m[2] };
+      Q.apply(g, g.turn, a);
+      draw(a.k === 'wall' ? `${a.x},${a.y},${a.o}` : null);
       timer = setTimeout(step, 1150);
     }
     return {

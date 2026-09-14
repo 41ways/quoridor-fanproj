@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>쿼리도</title>
+<meta name="description" content="벽을 세워 상대의 길을 막고, 먼저 건너편에 닿으면 이기는 온라인 쿼리도.">
+<meta name="theme-color" content="#efe6d8">
+<script>
+  // 첫 페인트 전에 테마를 정해서 화면이 번쩍이지 않게 한다
+  try {
+    var t = localStorage.getItem('theme');
+    if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.dataset.theme = t;
+  } catch (e) {}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect x='4' y='4' width='56' height='56' rx='14' fill='%235a3a22'/><rect x='12' y='30' width='40' height='6' rx='3' fill='%23f3dfb9'/><circle cx='32' cy='46' r='8' fill='%23ef6a4f'/><circle cx='32' cy='18' r='8' fill='%233d8bff'/></svg>">
+</head>
+<body>
+
+<div class="grain" aria-hidden="true"></div>
+
+<!-- ───────────────── 타이틀 ───────────────── -->
+<section id="title" class="screen on">
+  <header class="topbar">
+    <a class="brand-mini" href="https://41ways.github.io/norara/" title="게임 모음으로">norara</a>
+    <div class="tools">
+      <button class="icon-btn" data-sound aria-label="소리"><svg viewBox="0 0 24 24"><use href="#i-sound"/></svg></button>
+      <button class="icon-btn" data-theme-btn aria-label="테마 바꾸기"><svg viewBox="0 0 24 24"><use href="#i-moon"/></svg></button>
+    </div>
+  </header>
+
+  <div class="hero">
+    <div class="hero-board">
+      <svg id="demo" class="board-svg" aria-hidden="true"></svg>
+      <div class="hero-shine" aria-hidden="true"></div>
+    </div>
+
+    <div class="hero-copy">
+      <p class="eyebrow">벽과 길의 보드게임</p>
+      <h1 class="logo">쿼리도</h1>
+      <p class="tagline">벽을 세워 길을 굽히고, <br>먼저 건너편에 닿으세요.</p>
+
+      <label class="name-field">
+        <span>이름</span>
+        <input id="name" maxlength="12" placeholder="이름을 적어 주세요" autocomplete="nickname">
+      </label>
+
+      <div class="card-choice">
+        <div class="choice solo">
+          <div class="choice-head">
+            <span class="choice-ico">🤖</span>
+            <div><b>혼자 하기</b><small>봇과 바로 한 판</small></div>
+          </div>
+          <div class="seg" id="soloLevel" role="radiogroup" aria-label="봇 난이도">
+            <button data-v="easy">쉬움</button><button data-v="normal" class="on">보통</button><button data-v="hard">어려움</button>
+          </div>
+          <div class="seg" id="soloN" role="radiogroup" aria-label="인원">
+            <button data-v="2" class="on">1 : 1</button><button data-v="4">4인전</button>
+          </div>
+          <button id="bSolo" class="btn primary">바로 시작</button>
+        </div>
+
+        <div class="choice friends">
+          <div class="choice-head">
+            <span class="choice-ico">🪵</span>
+            <div><b>친구와 하기</b><small>방을 만들어 링크를 보내요</small></div>
+          </div>
+          <button id="bCreate" class="btn">방 만들기</button>
+          <div class="join-row">
+            <input id="joinCode" maxlength="4" placeholder="방 코드" autocapitalize="characters" autocomplete="off" spellcheck="false">
+            <button id="bJoin" class="btn ghost">들어가기</button>
+          </div>
+        </div>
+      </div>
+
+      <button class="link-btn" data-rules>규칙 한눈에 보기 →</button>
+    </div>
+  </div>
+
+  <footer class="foot">비상업 팬 프로젝트 · 쿼리도(Quoridor)는 Gigamic의 게임입니다</footer>
+</section>
+
+<!-- ───────────────── 대기실 ───────────────── -->
+<section id="lobby" class="screen">
+  <header class="topbar">
+    <button class="icon-btn" data-leave aria-label="나가기"><svg viewBox="0 0 24 24"><use href="#i-back"/></svg></button>
+    <div class="tools">
+      <button class="icon-btn" data-rules aria-label="규칙"><svg viewBox="0 0 24 24"><use href="#i-book"/></svg></button>
+      <button class="icon-btn" data-sound aria-label="소리"><svg viewBox="0 0 24 24"><use href="#i-sound"/></svg></button>
+      <button class="icon-btn" data-theme-btn aria-label="테마 바꾸기"><svg viewBox="0 0 24 24"><use href="#i-moon"/></svg></button>
+    </div>
+  </header>
+
+  <div class="lobby-wrap">
+    <div class="code-card">
+      <p class="eyebrow">방 코드</p>
+      <div class="code" id="lCode">····</div>
+      <button id="bCopy" class="btn ghost small"><svg viewBox="0 0 24 24"><use href="#i-link"/></svg> 초대 링크 복사</button>
+    </div>
+
+    <div class="seats" id="seats"></div>
+    <p class="seat-hint" id="seatHint"></p>
+
+    <div class="opts" id="opts">
+      <div class="opt">
+        <span>한 수 제한 시간</span>
+        <div class="seg" id="optTime">
+          <button data-v="30000">30초</button><button data-v="60000">1분</button><button data-v="120000">2분</button><button data-v="0">없음</button>
+        </div>
+      </div>
+      <div class="opt">
+        <span>봇 난이도</span>
+        <div class="seg" id="optLevel">
+          <button data-v="easy">쉬움</button><button data-v="normal">보통</button><button data-v="hard">어려움</button>
+        </div>
+      </div>
+    </div>
+
+    <button id="bStart" class="btn primary big">시작하기</button>
+    <p class="wait-host" id="waitHost">방장이 시작하기를 기다리는 중…</p>
+  </div>
+</section>
+
+<!-- ───────────────── 판 ───────────────── -->
+<section id="game" class="screen">
+  <header class="topbar">
+    <button class="icon-btn" data-menu aria-label="메뉴"><svg viewBox="0 0 24 24"><use href="#i-menu"/></svg></button>
+    <div class="turn-pill" id="turnPill"><span class="dot"></span><span id="turnText">준비</span></div>
+    <div class="tools">
+      <button class="icon-btn" id="bPath" aria-label="가장 짧은 길 보기" aria-pressed="false"><svg viewBox="0 0 24 24"><use href="#i-path"/></svg></button>
+      <button class="icon-btn" data-sound aria-label="소리"><svg viewBox="0 0 24 24"><use href="#i-sound"/></svg></button>
+      <button class="icon-btn" data-theme-btn aria-label="테마 바꾸기"><svg viewBox="0 0 24 24"><use href="#i-moon"/></svg></button>
+    </div>
+  </header>
+
+  <div class="table">
+    <div class="side-head">
+      <span class="logo-sm">쿼리도</span>
+      <span class="room-tag" id="roomTag"></span>
+    </div>
+    <div class="rail rail-top" id="railTop"></div>
+
+    <div class="board-area">
+      <div class="rail rail-side rail-left" id="railLeft"></div>
+      <div class="board-wrap" id="boardWrap">
+        <svg id="board" class="board-svg" role="img" aria-label="쿼리도 판"></svg>
+        <div class="wall-tip" id="wallTip"></div>
+        <div class="confirm" id="confirm">
+          <button class="btn primary small" id="bConfirm">여기에 세우기</button>
+          <button class="icon-btn sm" id="bCancel" aria-label="취소"><svg viewBox="0 0 24 24"><use href="#i-x"/></svg></button>
+        </div>
+      </div>
+      <div class="rail rail-side rail-right" id="railRight"></div>
+    </div>
+
+    <div class="me-panel" id="mePanel">
+      <div class="me-row">
+        <div class="me-card" id="meCard"></div>
+        <div class="stock" id="stock" aria-label="남은 벽"></div>
+      </div>
+      <p class="hint" id="hint">말을 옮기거나 칸 사이 홈을 눌러 벽을 세우세요</p>
+      <div class="emotes" id="emotes">
+        <button data-e="👍">👍</button><button data-e="😮">😮</button><button data-e="😂">😂</button><button data-e="🤔">🤔</button><button data-e="😭">😭</button><button data-e="🔥">🔥</button>
+        <button class="chat-open" id="bChat" aria-label="채팅"><svg viewBox="0 0 24 24"><use href="#i-chat"/></svg><span class="badge" id="chatBadge"></span></button>
+      </div>
+    </div>
+  </div>
+
+  <aside class="chat" id="chat">
+    <div class="chat-head"><b>채팅</b><button class="icon-btn sm" id="bChatClose" aria-label="닫기"><svg viewBox="0 0 24 24"><use href="#i-x"/></svg></button></div>
+    <ol class="chat-log" id="chatLog"></ol>
+    <form class="chat-form" id="chatForm"><input id="chatInput" maxlength="200" placeholder="한마디" autocomplete="off"><button class="btn small">보내기</button></form>
+  </aside>
+</section>
+
+<!-- ───────────────── 끝 ───────────────── -->
+<div class="overlay" id="over">
+  <canvas id="confetti"></canvas>
+  <div class="over-card">
+    <div class="crown" id="overPawn"></div>
+    <p class="eyebrow" id="overEyebrow">게임 끝</p>
+    <h2 id="overTitle">승리!</h2>
+    <p class="over-sub" id="overSub"></p>
+    <ul class="over-stats" id="overStats"></ul>
+    <div class="over-acts">
+      <button id="bAgain" class="btn primary">한 판 더</button>
+      <button id="bLobby" class="btn ghost">대기실로</button>
+      <button id="bView" class="btn ghost">판 다시 보기</button>
+    </div>
+    <p class="wait-host" id="overWait">방장이 다음 판을 고르는 중…</p>
+  </div>
+</div>
+
+<!-- ───────────────── 메뉴 ───────────────── -->
+<div class="overlay sheet-bg" id="menu">
+  <div class="sheet">
+    <button class="sheet-item" data-rules><svg viewBox="0 0 24 24"><use href="#i-book"/></svg> 규칙 보기</button>
+    <button class="sheet-item" id="bResign"><svg viewBox="0 0 24 24"><use href="#i-flag"/></svg> 기권하기</button>
+    <button class="sheet-item" data-leave><svg viewBox="0 0 24 24"><use href="#i-back"/></svg> 방 나가기</button>
+    <button class="sheet-item muted" data-close>닫기</button>
+  </div>
+</div>
+
+<!-- ───────────────── 규칙 ───────────────── -->
+<div class="overlay" id="rules">
+  <div class="rules-card">
+    <button class="icon-btn sm close" data-close aria-label="닫기"><svg viewBox="0 0 24 24"><use href="#i-x"/></svg></button>
+    <p class="eyebrow">한눈에 보는 규칙</p>
+    <h2>쿼리도</h2>
+    <div class="rule-grid">
+      <figure><svg class="board-svg mini" data-lesson="goal"></svg><figcaption><b>목표</b>내 말을 맞은편 끝줄에 먼저 닿게 하면 이겨요. 끝줄은 내 색으로 물들어 있어요.</figcaption></figure>
+      <figure><svg class="board-svg mini" data-lesson="move"></svg><figcaption><b>한 번에 하나</b>차례마다 말을 상하좌우로 한 칸 옮기거나, 벽 하나를 세워요.</figcaption></figure>
+      <figure><svg class="board-svg mini" data-lesson="wall"></svg><figcaption><b>벽</b>벽은 두 칸 길이예요. 2인은 10개, 4인은 5개씩. 겹치거나 엇갈릴 수 없고, <em>누구의 길도 완전히 막을 수는 없어요.</em></figcaption></figure>
+      <figure><svg class="board-svg mini" data-lesson="jump"></svg><figcaption><b>뛰어넘기</b>말끼리 마주 보면 넘어가요. 뒤가 벽이나 끝이면 옆으로 비껴가요.</figcaption></figure>
+    </div>
+    <p class="rules-tip">💡 벽을 세울 땐 칸 사이 홈을 가리키면 미리 보여요. 폰에서는 한 번 더 누르면 세워져요.</p>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- 아이콘 -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></g></symbol>
+  <symbol id="i-sound" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3l4.5-4v13L7 14.5H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></g></symbol>
+  <symbol id="i-mute" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3l4.5-4v13L7 14.5H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></g></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M14.5 5.5 8 12l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4.5 7h15M4.5 12h15M4.5 17h15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 5.5A2 2 0 0 1 6 4h5v15H6a2 2 0 0 0-2 1.5z"/><path d="M20 5.5A2 2 0 0 0 18 4h-5v15h5a2 2 0 0 1 2 1.5z"/></g></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></g></symbol>
+  <symbol id="i-path" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="6" r="2.2"/><path d="M8.2 18H14a3 3 0 0 0 0-6h-4a3 3 0 0 1 0-6h5.8" stroke-dasharray="2.2 2.6"/></g></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 21V4"/><path d="M5.5 4.5h11l-2 4 2 4h-11"/></g></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M5 5h14a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 19 17h-8l-4.5 3.5V17H5a1.5 1.5 0 0 1-1.5-1.5v-9A1.5 1.5 0 0 1 5 5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+</svg>
+
+<script src="/rules.js"></script>
+<script src="/board.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>

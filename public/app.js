@@ -756,6 +756,19 @@
   segPick('#optTime', v => send({ t: 'cfg', turnLimit: Number(v) }));
   segPick('#optLevel', v => send({ t: 'cfg', botLevel: v }));
 
+  // 처음 화면 ↔ 고르기 화면
+  function setup(on) {
+    $('#intro').hidden = on;
+    $('#setup').hidden = !on;
+    $('#title').classList.toggle('setting', on);
+    if (on) {
+      if (matchMedia('(max-width: 860px)').matches) scrollTo({ top: 0 });
+      Sound.fx('pop');
+    }
+  }
+  $('#bBegin').addEventListener('click', () => { setup(true); if (!$('#name').value) setTimeout(() => $('#name').focus({ preventScroll: true }), 350); });
+  $('#bBack').addEventListener('click', () => setup(false));
+
   $('#bSolo').addEventListener('click', () => {
     const level = ($('#soloLevel .on') || {}).dataset.v || 'normal';
     const n = Number(($('#soloN .on') || {}).dataset.v || 2);
@@ -903,6 +916,7 @@
   } else {
     if (invite) {
       forget();
+      setup(true);
       $('#joinCode').value = invite;
       history.replaceState(null, '', '/?r=' + invite);
       setTimeout(() => { toast(`방 ${invite} 초대장 — 이름을 적고 들어가기를 누르세요`, 3500); ($('#name').value ? $('#bJoin') : $('#name')).focus(); }, 400);

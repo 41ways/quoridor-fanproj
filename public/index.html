@@ -46,6 +46,15 @@
       <h1 class="logo">쿼리도</h1>
       <p class="tagline">벽을 세워 길을 굽히고, <br>먼저 건너편에 닿으세요.</p>
 
+      <!-- 처음 — 시작 단추 하나 -->
+      <div class="intro" id="intro">
+        <button id="bBegin" class="btn primary big begin">게임 시작</button>
+        <button class="link-btn" data-rules>규칙 한눈에 보기 →</button>
+      </div>
+
+      <!-- 게임 시작을 누른 뒤 — 혼자 / 친구와 -->
+      <div class="setup" id="setup" hidden>
+      <button class="link-btn back" id="bBack">← 처음으로</button>
       <label class="name-field">
         <span>이름</span>
         <input id="name" maxlength="12" placeholder="이름을 적어 주세요" autocomplete="nickname">
@@ -78,8 +87,7 @@
           </div>
         </div>
       </div>
-
-      <button class="link-btn" data-rules>규칙 한눈에 보기 →</button>
+      </div>
     </div>
   </div>
 

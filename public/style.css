@@ -304,6 +304,7 @@ input::placeholder { color: var(--faint); }
 .choice-head { display: flex; align-items: center; gap: 10px; margin-bottom: 2px; }
 .choice-head b { display: block; font-size: 16px; letter-spacing: -.02em; }
 .choice-head small { color: var(--faint); font-size: 12.5px; }
+.choice-ico img { width: 28px; height: auto; display: block; }
 .choice-ico { font-size: 22px; width: 42px; height: 42px; display: grid; place-items: center; border-radius: 13px; background: color-mix(in srgb, var(--ink) 6%, transparent); }
 .choice .btn { margin-top: auto; }
 .join-row { display: flex; gap: 6px; }

@@ -211,6 +211,8 @@
 
   /* ───────────────── 그리기 ───────────────── */
 
+  let gameAt = 0;                 // 이 판이 언제 시작했는지 (방장 화면에서만 쓴다)
+
   function render(s) {
     const prev = S;
     S = s;
@@ -228,10 +230,19 @@
     }
     if (current() !== 'game') show('game');
     if (s.games !== lastGames) { lastGames = s.games; lastPly = -1; overShown = false; closeOverlay('#over'); boardView.reset(); pending = null; }
+    // 판 수 세기 — 방장 화면에서만. s.games 가 서버의 판 번호라 한 판에 한 번만 걸린다.
+    if (s.phase === 'playing' && (!prev || prev.phase !== 'playing') && s.hostId === s.meId && window.norara) {
+      gameAt = Date.now();
+      norara.ev('start', { n: s.players.filter(p => !p.bot).length });
+    }
     rebuild(s);
     renderGame(s, prev);
     if (s.phase === 'over' && !overShown) {
       overShown = true;
+      if (s.hostId === s.meId && gameAt && window.norara) {
+        norara.ev('end', { n: s.players.filter(p => !p.bot).length, sec: Math.round((Date.now() - gameAt) / 1000) });
+        gameAt = 0;
+      }
       setTimeout(() => { if (S && S.phase === 'over') showOver(S); }, s.last && s.last.k === 'move' ? 700 : 250);
     }
   }

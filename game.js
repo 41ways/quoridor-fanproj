@@ -50,14 +50,15 @@ function makeCode() {
   return code;
 }
 
-function createRoom() {
+function createRoom({ seats = MAX_PLAYERS, priv = false } = {}) {
   const room = {
     code: makeCode(),
     phase: 'lobby',            // lobby | playing | over
     hostId: null,
     players: [],
     nextId: 1,
-    cfg: { turnLimit: 60000, botLevel: 'normal' },
+    // seats: 몇 자리 방인지(2 · 4) — 들어오기 · 봇 넣기 한도. priv: 열린 방 목록에 안 띄움(코드로는 들어온다)
+    cfg: { turnLimit: 60000, botLevel: 'normal', seats: seats === 2 ? 2 : MAX_PLAYERS, priv: !!priv },
 
     g: null,                   // rules.js 판
     order: [],                 // 말 인덱스 → player id
@@ -69,6 +70,8 @@ function createRoom() {
 
     timers: { turn: null, bot: null, dc: null, host: null },
     lastActive: Date.now(),
+    madeAt: Date.now(),
+    listKey: null,             // 열린 방 목록에 마지막으로 알린 모양 — 바뀔 때만 목록을 다시 민다
   };
   rooms.set(room.code, room);
   return room;
@@ -110,6 +113,7 @@ function removePlayer(room, id) {
   if (!room.players.some(x => !x.bot)) {
     clearAll(room);
     rooms.delete(room.code);
+    listChanged();
   }
 }
 
@@ -222,6 +226,58 @@ function finish(room, winnerId, why) {
   pushState(room);
 }
 
+/* ─────────────────────────── 열린 방 목록 ─────────────────────────── */
+/*
+ * 첫 화면(친구와 하기)을 보는 소켓에만 민다. 방이 생기고 · 사람이 드나들고 · 판이 시작되면
+ * pushState 가 목록 모양이 바뀌었는지 보고 알린다. 여러 번 바뀌어도 한 번에 모아 보낸다.
+ * 비공개 방 · 사람이 하나도 안 붙어 있는 방은 뺀다. 시작한 방 · 꽉 찬 방은 보이되 못 들어간다.
+ */
+const LIST_MAX = 12;
+const LIST_WAIT = FAST ? 20 : 300;
+const watchers = new Set();
+let listT = null;
+
+function listEntry(room) {
+  if (room.cfg.priv || !room.players.some(p => !p.bot && p.connected)) return null;
+  const host = playerOf(room, room.hostId);
+  const n = room.players.length, max = room.cfg.seats;
+  const state = room.phase !== 'lobby' ? 'playing' : n >= max ? 'full' : 'open';
+  return { code: room.code, host: host ? host.name : '', n, max, state };
+}
+
+function roomList() {
+  const list = [];
+  for (const r of rooms.values()) {
+    const e = listEntry(r);
+    if (e) list.push(Object.assign(e, { at: r.madeAt }));
+  }
+  // 들어갈 수 있는 방이 먼저, 그 안에서는 새로 생긴 방이 먼저
+  list.sort((a, b) => (a.state === 'open' ? 0 : 1) - (b.state === 'open' ? 0 : 1) || b.at - a.at);
+  return { t: 'rooms', list: list.slice(0, LIST_MAX).map(({ at, ...e }) => e) };
+}
+
+function listChanged() {
+  if (listT || !watchers.size) return;
+  listT = setTimeout(() => {
+    listT = null;
+    if (!watchers.size) return;
+    const text = JSON.stringify(roomList());
+    for (const ws of watchers) {
+      if (ws.readyState !== 1) { watchers.delete(ws); continue; }
+      try { ws.send(text); } catch (_) { watchers.delete(ws); }
+    }
+  }, LIST_WAIT);
+}
+
+/** 이 방의 목록 모양이 달라졌으면 알린다 — 판 중 한 수 한 수에는 걸리지 않는다 */
+function touchList(room) {
+  const e = rooms.has(room.code) ? listEntry(room) : null;
+  const key = e ? `${e.state}|${e.n}|${e.max}|${e.host}` : '';
+  if (key === room.listKey) return;
+  room.listKey = key;
+  listChanged();
+}
+
 /* ─────────────────────────── 보내기 ─────────────────────────── */
 
 function send(ws, obj) {
@@ -261,6 +317,7 @@ function stateFor(room, me) {
 
 function pushState(room) {
   for (const p of room.players) if (p.ws) send(p.ws, stateFor(room, p));
+  touchList(room);
 }
 function broadcast(room, obj) {
   for (const p of room.players) if (p.ws) send(p.ws, obj);
@@ -275,6 +332,7 @@ function clearAll(room) {
 function attach(room, p, ws) {
   if (ws.roomCode && (ws.roomCode !== room.code || ws.playerId !== p.id)) detach(ws);
   clearTimeout(p.leaveT);
+  watchers.delete(ws);           // 방에 들어가면 목록 구독은 끝
   p.ws = ws; p.connected = true;
   ws.roomCode = room.code; ws.playerId = p.id;
   room.lastActive = Date.now();
@@ -302,20 +360,29 @@ function detach(ws) {
 function handle(ws, msg) {
   if (['create', 'join', 'resume', 'solo'].includes(msg.t) && ws.roomCode) detach(ws);
   switch (msg.t) {
+    // 열린 방 목록 — 보기 시작하면 지금 목록을 주고, 바뀔 때마다 민다. 'unrooms' 로 그만 본다.
+    case 'rooms':
+      if (ws.roomCode) return;
+      watchers.add(ws);
+      send(ws, roomList());
+      return;
+    case 'unrooms':
+      watchers.delete(ws);
+      return;
     case 'create': {
-      const r = createRoom();
+      const r = createRoom({ seats: msg.seats, priv: msg.priv });
       const p = addPlayer(r, { name: clean(msg.name, 12) || '플레이어 1' });
       attach(r, p, ws);
       return;
     }
     case 'solo': {
       // 혼자 하기 — 방을 만들고 봇을 앉혀 곧바로 시작한다
-      const r = createRoom();
+      const n = msg.n === 4 ? 4 : 2;
+      const r = createRoom({ seats: n, priv: true });   // 봇과 하는 방은 목록에 안 띄운다
       const lv = LEVELS.includes(msg.level) ? msg.level : 'normal';
       r.cfg.botLevel = lv;
       r.cfg.turnLimit = 0;
       const p = addPlayer(r, { name: clean(msg.name, 12) || '나' });
-      const n = msg.n === 4 ? 4 : 2;
       for (let k = 1; k < n; k++) addPlayer(r, { name: BOT_NAMES[k - 1], bot: true, level: lv });
       attach(r, p, ws);
       startGame(r);
@@ -326,7 +393,7 @@ function handle(ws, msg) {
       const r = rooms.get(code);
       if (!r) return send(ws, { t: 'err', msg: '그런 방이 없어요. 코드를 확인해 주세요.' });
       if (r.phase !== 'lobby') return send(ws, { t: 'err', msg: '이미 시작한 방이에요.' });
-      if (r.players.length >= MAX_PLAYERS) return send(ws, { t: 'err', msg: '방이 가득 찼어요.' });
+      if (r.players.length >= r.cfg.seats) return send(ws, { t: 'err', msg: '방이 가득 찼어요.' });
       const p = addPlayer(r, { name: clean(msg.name, 12) || `플레이어 ${r.players.length + 1}` });
       attach(r, p, ws);
       ev(r, { kind: 'joined', by: p.id });
@@ -365,13 +432,18 @@ function handle(ws, msg) {
         room.cfg.botLevel = msg.botLevel;
         for (const p of room.players) if (p.bot) p.level = msg.botLevel;
       }
+      if (typeof msg.priv === 'boolean') room.cfg.priv = msg.priv;
+      if (msg.seats === 2 || msg.seats === 4) {
+        if (room.players.length > msg.seats) send(ws, { t: 'err', msg: '자리를 먼저 비워 주세요.' });
+        else room.cfg.seats = msg.seats;
+      }
       pushState(room);
       break;
     }
 
     case 'addBot': {
       if (!isHost || room.phase === 'playing') return;
-      if (room.players.length >= MAX_PLAYERS) return send(ws, { t: 'err', msg: '자리가 없어요.' });
+      if (room.players.length >= room.cfg.seats) return send(ws, { t: 'err', msg: '자리가 없어요.' });
       const used = new Set(room.players.map(p => p.name));
       const name = BOT_NAMES.find(n => !used.has(n)) || `봇 ${room.players.length + 1}`;
       addPlayer(room, { name, bot: true });
@@ -462,6 +534,7 @@ function armLeave(room, p) {
 }
 
 function disconnect(ws, { keepSeat = false } = {}) {
+  watchers.delete(ws);
   const room = rooms.get(ws.roomCode);
   if (!room) return;
   const p = playerOf(room, ws.playerId);
@@ -495,6 +568,7 @@ function sweepRooms(now = Date.now()) {
     if (humans === 0 && now - room.lastActive > (seated ? 10 * 60_000 : 90_000)) {
       clearAll(room);
       rooms.delete(code);
+      if (room.listKey) listChanged();
     }
   }
 }
@@ -505,4 +579,4 @@ function selfCheck() {
   if (Q.distance(g, 0) !== 8 || Q.pawnMoves(g, 0).length !== 3) throw new Error('rules.js 가 이상해요');
 }
 
-module.exports = { rooms, handle, disconnect, sweepRooms, selfCheck, MAX_PLAYERS, LEVEL_NAME };
+module.exports = { rooms, watchers, roomList, handle, disconnect, sweepRooms, selfCheck, MAX_PLAYERS, LEVEL_NAME };

@@ -23,6 +23,7 @@
   let pending = null;        // 폰에서 한 번 누른 벽 자리
   let showPaths = ls.get('paths') === '1';
   let overShown = false;
+  let watching = false;      // 열린 방 목록을 구독 중인지 (친구와 하기 화면을 보는 동안만)
 
   /* ───────────────── 소리 ───────────────── */
 
@@ -107,6 +108,7 @@
     demo.running(id === 'title');
     if (id !== 'game') closeOverlay('#over');
     if (id === 'title') syncChat(null);
+    if (id === 'title') watchRooms(listOpen()); else watching = false;   // 방에 들어가면 서버가 구독을 끊는다
   }
   const current = () => ($('.screen.on') || {}).id;
 
@@ -158,19 +160,66 @@
         setTimeout(resume, 1200);
       } else if (current() !== 'title') {
         show('title');
+      } else if (watching) {
+        // 목록을 보다 끊겼으면(배포 등) 조금 뒤 다시 붙는다
+        setTimeout(() => { if (watching && (!ws || ws.readyState > 1)) connect(() => send({ t: 'rooms' })); }, 1500);
       }
     };
+  }
+  /** 조용히 끊는다 — 목록만 보던 탭이 뒤로 가면 객체를 깨워 두지 않게 */
+  function hangUp() {
+    if (!ws) return;
+    ws.onopen = ws.onmessage = ws.onclose = null;
+    try { ws.close(1000, 'bye'); } catch (_) {}
+    ws = null;
+    clearInterval(pingT);
   }
   const resume = () => connect(() => send({ t: 'resume', code: store.getItem('code'), token: store.getItem('token') }));
 
   document.addEventListener('pointerdown', () => {
     Sound.unlock();
-    if (resting) { resting = false; $('#toast').classList.remove('on'); resume(); }
+    if (resting) {
+      resting = false; $('#toast').classList.remove('on');
+      if (store.getItem('code')) resume();
+      else if (listOpen()) { watching = false; watchRooms(true); }
+    }
   }, true);
+
+  /* ───────────────── 열린 방 목록 ───────────────── */
+
+  const listOpen = () => current() === 'title' && !$('#setup').hidden && !store.getItem('code');
+  function watchRooms(on) {
+    if (on === watching) return;
+    watching = on;
+    if (on) connect(() => { if (watching) send({ t: 'rooms' }); });
+    else send({ t: 'unrooms' });
+  }
+  // 목록만 보던 탭을 뒤로 보내면 끊고, 돌아오면 다시 붙는다
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      if (watching && !store.getItem('code')) { watching = false; hangUp(); }
+    } else if (listOpen() && !resting) watchRooms(true);
+  });
+
+  const STATE = { open: '기다리는 중', full: '가득 참', playing: '게임 중' };
+  function renderRooms(m) {
+    const list = m.list || [];
+    const open = list.filter(r => r.state === 'open').length;
+    $('#roomCount').textContent = list.length ? `들어갈 수 있는 방 ${open}개` : '';
+    $('#roomEmpty').hidden = list.length > 0;
+    $('#roomList').innerHTML = list.map(r => `
+      <li><button class="room-row ${r.state}" data-code="${esc(r.code)}" ${r.state === 'open' ? '' : 'disabled'}>
+        <span class="rr-code">${esc(r.code)}</span>
+        <span class="rr-host">${esc(r.host || '이름 없음')}</span>
+        <span class="rr-n">${r.n}/${r.max}명</span>
+        <span class="rr-st">${STATE[r.state] || ''}</span>
+      </button></li>`).join('');
+  }
 
   function handle(m) {
     switch (m.t) {
       case 'joined':
+        watching = false;
         store.setItem('code', m.code);
         store.setItem('token', m.token);
         history.replaceState(null, '', '/?r=' + m.code);
@@ -184,6 +233,7 @@
       case 'left': forget(); show('title'); break;
       case 'ev': onEvent(m); break;
       case 'chat': onChat(m); break;
+      case 'rooms': if (watching) renderRooms(m); break;
     }
   }
 
@@ -256,7 +306,7 @@
     const n = s.players.length;
     const seats = $('#seats');
     seats.innerHTML = '';
-    for (let k = 0; k < 4; k++) {
+    for (let k = 0; k < (s.cfg.seats || 4); k++) {
       const p = s.players[k];
       const d = document.createElement('div');
       if (!p) {
@@ -276,6 +326,8 @@
       : n === 2 ? '1 : 1 준비 완료 — 벽은 한 사람에 10개씩'
       : n === 3 ? '쿼리도는 2명 또는 4명이 해요. 한 자리를 더 채우거나 비워 주세요.'
       : '4인전 준비 완료 — 벽은 한 사람에 5개씩';
+    setSeg('#optSeats', String(s.cfg.seats), !host);
+    setSeg('#optPriv', s.cfg.priv ? '1' : '0', !host);
     setSeg('#optTime', String(s.cfg.turnLimit), !host);
     setSeg('#optLevel', s.cfg.botLevel, !host);
     $('#bStart').hidden = !host;
@@ -806,6 +858,9 @@
   }
   segPick('#soloLevel', v => ls.set('level', v));
   segPick('#soloN', v => ls.set('soloN', v));
+  segPick('#createSeats', v => ls.set('seats', v));
+  segPick('#optSeats', v => send({ t: 'cfg', seats: Number(v) }));
+  segPick('#optPriv', v => send({ t: 'cfg', priv: v === '1' }));
   segPick('#optTime', v => send({ t: 'cfg', turnLimit: Number(v) }));
   segPick('#optLevel', v => send({ t: 'cfg', botLevel: v }));
 
@@ -814,6 +869,7 @@
     $('#intro').hidden = on;
     $('#setup').hidden = !on;
     $('#title').classList.toggle('setting', on);
+    watchRooms(on && listOpen());
     if (on) {
       if (matchMedia('(max-width: 860px)').matches) scrollTo({ top: 0 });
       Sound.fx('pop');
@@ -827,7 +883,15 @@
     const n = Number(($('#soloN .on') || {}).dataset.v || 2);
     connect(() => send({ t: 'solo', name: myName() || '나', level, n }));
   });
-  $('#bCreate').addEventListener('click', () => connect(() => send({ t: 'create', name: myName() })));
+  $('#bCreate').addEventListener('click', () => {
+    const seats = Number(($('#createSeats .on') || {}).dataset.v || 2);
+    connect(() => send({ t: 'create', name: myName(), seats, priv: $('#createPriv').checked }));
+  });
+  $('#roomList').addEventListener('click', e => {
+    const b = e.target.closest('button[data-code]');
+    if (!b || b.disabled) return;
+    connect(() => send({ t: 'join', code: b.dataset.code, name: myName() }));
+  });
   const join = () => {
     const code = $('#joinCode').value.trim().toUpperCase();
     if (code.length !== 4) { toast('네 글자 방 코드를 적어 주세요'); $('#joinCode').focus(); return; }
@@ -968,6 +1032,7 @@
   $('#name').value = ls.get('name') || '';
   const lv = ls.get('level'); if (lv) setSeg('#soloLevel', lv);
   const sn = ls.get('soloN'); if (sn) setSeg('#soloN', sn);
+  const cs = ls.get('seats'); if (cs) setSeg('#createSeats', cs);
   boardView.init();
 
   const params = new URLSearchParams(location.search);

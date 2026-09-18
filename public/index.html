@@ -96,12 +96,23 @@
             <span class="choice-ico"><img src="/logo.svg" alt="" width="28" height="25"></span>
             <div><b>친구와 하기</b><small>방을 만들어 링크를 보내요</small></div>
           </div>
+          <div class="seg" id="createSeats" role="radiogroup" aria-label="방 인원">
+            <button data-v="2" class="on">1 : 1</button><button data-v="4">4인전</button>
+          </div>
+          <label class="check"><input type="checkbox" id="createPriv"> 비공개 <small>코드로만 들어옴</small></label>
           <button id="bCreate" class="btn">방 만들기</button>
           <div class="join-row">
             <input id="joinCode" maxlength="4" placeholder="방 코드" autocapitalize="characters" autocomplete="off" spellcheck="false">
             <button id="bJoin" class="btn ghost">들어가기</button>
           </div>
         </div>
+      </div>
+
+      <!-- 열린 방 — 코드를 몰라도 사람을 기다리는 방에 바로 들어간다 -->
+      <div class="open-rooms">
+        <div class="or-head"><b>열린 방</b><span id="roomCount"></span></div>
+        <ul id="roomList" class="room-list"></ul>
+        <p id="roomEmpty" class="room-empty">지금 기다리는 방이 없어요. 방을 만들면 여기에 떠요.</p>
       </div>
       </div>
     </div>
@@ -139,6 +150,18 @@
     <p class="seat-hint" id="seatHint"></p>
 
     <div class="opts" id="opts">
+      <div class="opt">
+        <span>인원</span>
+        <div class="seg" id="optSeats">
+          <button data-v="2">1 : 1</button><button data-v="4">4인전</button>
+        </div>
+      </div>
+      <div class="opt">
+        <span>열린 방 목록</span>
+        <div class="seg" id="optPriv">
+          <button data-v="0">보이기</button><button data-v="1">비공개</button>
+        </div>
+      </div>
       <div class="opt">
         <span>한 수 제한 시간</span>
         <div class="seg" id="optTime">

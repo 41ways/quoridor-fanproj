@@ -60,7 +60,7 @@ export class QuoridorGame extends DurableObject {
 
   async fetch(req) {
     if (new URL(req.url).pathname === '/healthz') {
-      return Response.json({ ok: true, rooms: game.rooms.size, sockets: this.socks.size });
+      return Response.json({ ok: true, rooms: game.rooms.size, sockets: this.socks.size, watching: game.watchers.size });
     }
     if (req.headers.get('Upgrade') !== 'websocket') return new Response('websocket only', { status: 426 });
 

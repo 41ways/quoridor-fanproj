@@ -148,6 +148,7 @@ svg { display: block; }
 .btn:hover { transform: translateY(-1px); box-shadow: 0 1px 0 rgba(255,255,255,.5) inset, 0 6px 16px -8px rgba(60,30,10,.35); }
 .btn:active { transform: translateY(1px); box-shadow: none; }
 .btn:disabled { opacity: .45; pointer-events: none; }
+.btn[hidden] { display: none; }   /* inline-flex 가 hidden 을 이기지 않게 — 방장이 아니면 시작하기가 안 보여야 한다 */
 .btn.primary {
   color: var(--accent-ink); border-color: transparent;
   background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 88%, #fff) 0%, var(--accent) 45%, var(--accent-2) 100%);
@@ -405,6 +406,38 @@ input::placeholder { color: var(--faint); }
 .join-row input { text-transform: uppercase; letter-spacing: .2em; text-align: center; font-weight: 700; padding: 10px; min-width: 0; }
 .join-row .btn { padding: 10px 12px; white-space: nowrap; flex: none; }
 .join-row input { flex: 1; letter-spacing: .12em; }
+
+/* 비공개 방 고르기 */
+.check { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: var(--ink-2); cursor: pointer; flex-wrap: wrap; }
+.check input { width: 17px; height: 17px; padding: 0; margin: 0; flex: none; accent-color: var(--accent); box-shadow: none; }
+.check small { font-weight: 500; font-size: 12px; color: var(--faint); }
+
+/* 열린 방 목록 — 친구와 하기 화면 아래 */
+.open-rooms {
+  display: grid; gap: 8px; padding: 14px 16px; border-radius: 20px;
+  background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+}
+.or-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.or-head b { font-size: 15px; letter-spacing: -.02em; }
+.or-head span { font-size: 12.5px; color: var(--faint); }
+.room-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-height: 248px; overflow-y: auto; }
+.room-list:empty { display: none; }
+.room-row {
+  width: 100%; display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 10px;
+  padding: 9px 12px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--card-solid);
+  text-align: left; transition: transform .15s, border-color .15s, background .15s;
+}
+.room-row:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+.room-row:active { transform: translateY(1px); }
+.room-row:disabled { opacity: .55; background: transparent; cursor: default; transform: none; border-color: var(--line); }
+.rr-code { font-weight: 800; letter-spacing: .12em; font-size: 14px; }
+.rr-host { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rr-n { font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.rr-st { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 99px; color: var(--faint); background: color-mix(in srgb, var(--ink) 6%, transparent); white-space: nowrap; }
+.room-row.open .rr-st { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.room-empty { margin: 4px 0 2px; font-size: 13px; color: var(--faint); text-align: center; }
+.room-empty[hidden] { display: none; }
 
 .foot { text-align: center; color: var(--faint); font-size: 12px; padding: 0 16px max(14px, env(safe-area-inset-bottom)); }
 .legal { font-size: 11.5px; line-height: 1.7; color: var(--faint); word-break: keep-all; }

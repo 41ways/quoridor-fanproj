@@ -33,7 +33,7 @@
     const ac = () => {
       if (!on) return null;
       if (!ctx) { try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) { return null; } }
-      if (ctx.state === 'suspended') ctx.resume();
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {}); // 소리 장치를 못 열면(이어폰 뺌 등) 조용히 넘어간다
       return ctx;
     };
     function noise(c, dur) {

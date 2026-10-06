@@ -96,16 +96,20 @@ export class QuoridorGame extends DurableObject {
     if (this.timer) return;
     this.timer = setTimeout(() => {
       this.timer = null;
-      const now = Date.now();
-      for (const s of [...this.socks]) {
-        if (now - s.seen > ALIVE_MS) {
-          this.drop(s, 1001, 'gone');
-        } else if (now - s.acted > this.idleMs) {
-          s.send(JSON.stringify({ t: 'idle' }));
-          this.drop(s, 4000, 'idle');
+      // 이 중 하나가 던지면 try/catch 없이는 되풀이 타이머가 거기서 영영 멈춰 모든 방의 청소가
+      // 함께 죽는다 — 로그만 남기고 다음 틱을 잇는다.
+      try {
+        const now = Date.now();
+        for (const s of [...this.socks]) {
+          if (now - s.seen > ALIVE_MS) {
+            this.drop(s, 1001, 'gone');
+          } else if (now - s.acted > this.idleMs) {
+            s.send(JSON.stringify({ t: 'idle' }));
+            this.drop(s, 4000, 'idle');
+          }
         }
-      }
-      game.sweepRooms(now);
+        game.sweepRooms(now);
+      } catch (e) { console.error('청소 타이머 오류', e && e.stack || e); }
       if (this.socks.size || game.rooms.size) this.tick();
     }, this.sweepMs);
   }

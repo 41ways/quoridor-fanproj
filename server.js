@@ -65,7 +65,9 @@ setInterval(() => {
     ws.isAlive = false;
     try { ws.ping(); } catch (_) {}
   });
-  sweepRooms();
+  // sweepRooms 가 던지면(방 하나 상태가 어긋난 경우 등) 이 되풀이 타이머가 죽어 이후로 아무 방도
+  // 청소되지 않는다 — 로그만 남기고 다음 틱을 잇는다.
+  try { sweepRooms(); } catch (e) { console.error('방 청소 오류', e); }
 }, 30_000);
 
 server.listen(PORT, () => {

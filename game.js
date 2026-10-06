@@ -30,6 +30,17 @@ const clean = (s, max) => String(s == null ? '' : s)
 const token = () => Array.from(globalThis.crypto.getRandomValues(new Uint8Array(12)),
   b => b.toString(16).padStart(2, '0')).join('');
 
+/** setTimeout 으로 나중에 도는 콜백(봇 수 · 대신 두기 · 끊긴 자리 비우기 · 방장 넘기기 등)은 사람이
+ *  보낸 메시지와 달리 handle() 의 바깥 try/catch 를 지나지 않는다 — 안에서 뭔가 어긋나 던지면 Node
+ *  프로세스가 죽어 이 방과 무관한 다른 방의 판까지 통째로 멈춘다. 그런 콜백은 전부 이걸로 감싼다:
+ *  한 방이 어긋나도 로그만 남기고 나머지 방은 그대로 돈다. */
+function safeTimer(fn) {
+  return (...a) => {
+    try { fn(...a); }
+    catch (e) { console.error('타이머 처리 오류', e && e.stack || e); }
+  };
+}
+
 function shuffle(a) {
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -142,20 +153,20 @@ function startTurn(room) {
   const p = playerOf(room, turnId(room));
   const limit = room.cfg.turnLimit;
   room.turnEndsAt = limit ? Date.now() + limit : 0;
-  if (limit) room.timers.turn = setTimeout(() => autoMove(room, p, 'timeout'), limit);
+  if (limit) room.timers.turn = setTimeout(safeTimer(() => autoMove(room, p, 'timeout')), limit);
 
   if (p && p.bot && !room.players.some(x => !x.bot && x.connected)) {
     // 지켜보는 사람이 없으면 봇도 쉰다 — 누가 돌아오면 attach 에서 다시 깨운다
   } else if (p && p.bot) {
     // 첫 수는 판이 그려질 시간을 조금 더 준다
     const wait = rnd(...BOT_THINK) + (g.ply === 0 && !FAST ? 900 : 0);
-    room.timers.bot = setTimeout(() => {
+    room.timers.bot = setTimeout(safeTimer(() => {
       if (room.phase !== 'playing' || turnId(room) !== p.id) return;
       const a = Q.botMove(room.g, room.g.turn, p.level);
       act(room, p, a);
-    }, wait);
+    }), wait);
   } else if (p && !p.connected && !limit) {
-    room.timers.dc = setTimeout(() => autoMove(room, p, 'away'), DC_GRACE);
+    room.timers.dc = setTimeout(safeTimer(() => autoMove(room, p, 'away')), DC_GRACE);
   }
   pushState(room);
 }
@@ -258,7 +269,7 @@ function roomList() {
 
 function listChanged() {
   if (listT || !watchers.size) return;
-  listT = setTimeout(() => {
+  listT = setTimeout(safeTimer(() => {
     listT = null;
     if (!watchers.size) return;
     const text = JSON.stringify(roomList());
@@ -266,7 +277,7 @@ function listChanged() {
       if (ws.readyState !== 1) { watchers.delete(ws); continue; }
       try { ws.send(text); } catch (_) { watchers.delete(ws); }
     }
-  }, LIST_WAIT);
+  }), LIST_WAIT);
 }
 
 /** 이 방의 목록 모양이 달라졌으면 알린다 — 판 중 한 수 한 수에는 걸리지 않는다 */
@@ -525,12 +536,12 @@ function handle(ws, msg) {
 
 function armLeave(room, p) {
   clearTimeout(p.leaveT);
-  p.leaveT = setTimeout(() => {
+  p.leaveT = setTimeout(safeTimer(() => {
     if (p.connected || !rooms.has(room.code)) return;
     if (room.phase === 'playing') return;         // 판 중이면 자리를 지킨다 — 돌아올 수 있다
     removePlayer(room, p.id);
     if (rooms.has(room.code)) pushState(room);
-  }, LOBBY_GRACE);
+  }), LOBBY_GRACE);
 }
 
 function disconnect(ws, { keepSeat = false } = {}) {
@@ -544,19 +555,19 @@ function disconnect(ws, { keepSeat = false } = {}) {
 
   if (room.hostId === p.id) {
     clearTimeout(room.timers.host);
-    room.timers.host = setTimeout(() => {
+    room.timers.host = setTimeout(safeTimer(() => {
       const h = playerOf(room, room.hostId);
       if (h && h.connected) return;
       const next = room.players.find(x => !x.bot && x.connected);
       if (next) { room.hostId = next.id; pushState(room); }
-    }, LOBBY_GRACE);
+    }), LOBBY_GRACE);
   }
 
   if (room.phase === 'lobby') {
     if (!keepSeat) armLeave(room, p);
   } else if (room.phase === 'playing' && turnId(room) === p.id && !room.cfg.turnLimit) {
     clearTimeout(room.timers.dc);
-    room.timers.dc = setTimeout(() => autoMove(room, p, 'away'), DC_GRACE);
+    room.timers.dc = setTimeout(safeTimer(() => autoMove(room, p, 'away')), DC_GRACE);
   }
   pushState(room);
 }

@@ -276,15 +276,23 @@
       const walls = [];
       for (const t of targets) cuttingWalls(g, t, walls);
       const seen = new Set();
+      const myD = distance(g, i);
       for (const w of walls) {
         const key = w.o + w.x + ',' + w.y;
         if (seen.has(key)) continue;
         seen.add(key);
-        if (!wallProblem(g, i, w.x, w.y, w.o)) list.push(w);
+        if (wallProblem(g, i, w.x, w.y, w.o)) continue;
+        // 내 길이 길어지는 벽은 아예 놓지 않는다 — 이게 없으면 봇이 제 발등을 찍으며 벽을 다 쓴다
+        const m = w.o === 'h' ? g.hw : g.vw;
+        m[w.x][w.y] = true;
+        const hurtsMe = distance(g, i) > myD;
+        m[w.x][w.y] = false;
+        if (!hurtsMe) list.push(w);
       }
     }
     return list;
   }
+
 
   const others = (g, i) => g.pawns.map((p, k) => k).filter(k => k !== i && !g.pawns[k].out);
 
@@ -314,10 +322,11 @@
 
   /**
    * 봇이 둘 수.  level: 'easy' | 'normal' | 'hard'
-   * rnd 는 시험에서 결과를 고정하려고 바꿔 끼울 수 있다.
+   * recent 는 이 봇이 최근에 서 있던 칸들('x,y') — 같은 자리를 오가는 걸 막는다.
    */
-  function botMove(g, i, level, rnd) {
+  function botMove(g, i, level, rnd, recent) {
     rnd = rnd || Math.random;
+    const seenCells = new Set(recent || []);
     const lead = leader(g, i);
     const myD = distance(g, i);
 
@@ -328,7 +337,8 @@
       const moves = pawnMoves(g, i);
       const scored = moves.map(m => {
         const t = clone(g); t.pawns[i].x = m.x; t.pawns[i].y = m.y;
-        return { a: { k: 'move', x: m.x, y: m.y }, s: -distance(t, i) + rnd() * 1.6 };
+        const back = seenCells.has(m.x + ',' + m.y) ? 0.8 : 0;
+        return { a: { k: 'move', x: m.x, y: m.y }, s: -distance(t, i) - back + rnd() * 1.6 };
       });
       // 가끔 상대 길목에 벽 하나
       if (lead >= 0 && g.pawns[i].walls > 0 && distance(g, lead) < myD && rnd() < 0.3) {
@@ -367,6 +377,10 @@
       }
       // 벽은 아껴 둔다 — 내가 앞서면 굳이 쓰지 않고, 뒤지거나 비등하면 적극적으로 끊는다
       if (a.k === 'wall' && !deep) s += behind ? 0.25 : -0.35;
+      // 져 있는 판에서도 결승선 쪽으로는 가게 — 모든 수가 똑같아 보이면 제자리걸음을 한다
+      s -= 0.08 * distance(t, i);
+      // 방금 있던 칸으로 되돌아가는 수는 뒤로 민다
+      if (a.k === 'move' && seenCells.has(a.x + ',' + a.y)) s -= 0.6;
       s += rnd() * noise;
       if (s > bestS) { bestS = s; best = a; }
     }

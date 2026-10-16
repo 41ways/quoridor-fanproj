@@ -135,6 +135,7 @@ function startGame(room) {
   const n = room.players.length;
   // 누가 먼저 둘지는 섞는다. 먼저 두는 쪽이 아래 자리(첫 말)다.
   room.order = shuffle(room.players.map(p => p.id));
+  for (const p of room.players) p.recent = [];
   room.g = Q.newGame(n);
   room.phase = 'playing';
   room.last = null;
@@ -162,7 +163,7 @@ function startTurn(room) {
     const wait = rnd(...BOT_THINK) + (g.ply === 0 && !FAST ? 900 : 0);
     room.timers.bot = setTimeout(safeTimer(() => {
       if (room.phase !== 'playing' || turnId(room) !== p.id) return;
-      const a = Q.botMove(room.g, room.g.turn, p.level);
+      const a = Q.botMove(room.g, room.g.turn, p.level, null, p.recent);
       act(room, p, a);
     }), wait);
   } else if (p && !p.connected && !limit) {
@@ -202,6 +203,10 @@ function act(room, p, a, auto) {
     return false;
   }
   room.lastActive = Date.now();
+  if (a.k === 'move' && p.bot) {
+    // 봇이 방금 떠난 자리들 — 같은 칸을 오가지 않게 다음 수에서 피한다
+    p.recent = [...(p.recent || []), `${before.x},${before.y}`].slice(-4);
+  }
   room.last = a.k === 'move'
     ? { k: 'move', by: p.id, from: before, to: { x: a.x, y: a.y }, jump, auto: auto || null, ply: g.ply }
     : { k: 'wall', by: p.id, x: a.x, y: a.y, o: a.o, auto: auto || null, ply: g.ply };

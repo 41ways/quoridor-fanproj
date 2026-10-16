@@ -164,4 +164,31 @@ t('첫 화면 구경용 세 판이 규칙대로 끝난다', () => {
   }
 });
 
+t('봇은 제 길을 늘리는 벽을 놓지 않고, 벽만 세우다 제자리걸음 하지 않는다', () => {
+  let seed = 977, selfWall = 0, idle = 0, moves = 0;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  for (let k = 0; k < 8; k++) {
+    const g = Q.newGame(2);
+    const rec = [[], []];
+    let prevD = null, walls = 0, n = 0;
+    while (g.winner < 0 && n++ < 300) {
+      const i = g.turn;
+      const before = Q.distance(g, 1);
+      const a = Q.botMove(g, i, i === 0 ? 'normal' : 'hard', rnd, rec[i]);
+      if (a.k === 'move') { rec[i].push(g.pawns[i].x + ',' + g.pawns[i].y); if (rec[i].length > 4) rec[i].shift(); }
+      assert.ok(!Q.apply(g, i, a).error, '봇이 틀린 수를 냈다');
+      if (i !== 1) continue;
+      const d = Q.distance(g, 1);
+      if (a.k === 'wall' && d > before) selfWall++;
+      // 아무도 벽을 더 세우지 않았는데 결승선이 가까워지지 않은 수
+      if (a.k === 'move') { moves++; if (prevD !== null && d >= prevD && g.walls.length === walls) idle++; }
+      prevD = d; walls = g.walls.length;
+    }
+    assert.ok(g.winner >= 0, '판이 끝나지 않음');
+  }
+  assert.strictEqual(selfWall, 0, `제 길을 늘린 벽 ${selfWall}개`);
+  assert.ok(idle <= moves * 0.02, `헛도는 수 ${idle}/${moves}`);
+  console.log(`      봇 이동 ${moves}수 중 헛도는 수 ${idle}개, 제 길 늘린 벽 ${selfWall}개`);
+});
+
 console.log(`\n${pass}개 통과`);

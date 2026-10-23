@@ -817,15 +817,13 @@
   document.addEventListener('visibilitychange', chatBack);
   window.addEventListener('focus', chatBack);
 
-  /** 방이 바뀌면 비우고, 사람이 둘 이상일 때만 단추를 내놓는다 */
+  /** 방이 바뀌면 비우고, 방에 있으면 단추를 내놓는다 — 봇만 있는 방에서도 (전 게임 공통) */
   function syncChat(s) {
     if (!s) { chatRoom = null; chatReset(); $('#chatBtn').hidden = true; return; }
     if (s.code !== chatRoom) { chatRoom = s.code; chatReset(); }
     const humans = s.players.filter(p => !p.bot).length;
-    const on = humans > 1;
-    $('#chatBtn').hidden = !on;
-    if (!on) { $('#chat').hidden = true; chatPeekOff(); }
-    else $('#chatWho').textContent = `${humans}명`;
+    $('#chatBtn').hidden = false;
+    $('#chatWho').textContent = humans > 1 ? `${humans}명` : '지금은 나 혼자 — 초대 링크로 불러 보세요';
   }
 
   $('#chatBtn').addEventListener('click', () => chatOpen($('#chat').hidden));
